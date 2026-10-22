@@ -1,0 +1,7 @@
+// Mock defaults so a clean clone builds and runs against the vendor's Apiary mock, which
+// replays the documented examples for any apikey. A real salon overrides every key in
+// Salon.local.xcconfig (gitignored). The `$()` splits `//`, which xcconfig would read as a comment.
+SALON_ID = 0d190fc81c01-11ef-b1bf-f02f7488d897
+SALON_API_KEY = mock
+SALON_SERVER_URL = http:/$()/private-anon-5309c9fb20-salon1c.apiary-mock.com/api
+#include? "Salon.local.xcconfig"

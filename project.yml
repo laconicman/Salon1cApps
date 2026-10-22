@@ -1,0 +1,149 @@
+# The source of truth for Salon1cApps.xcodeproj — run `xcodegen generate` after editing
+# this file or after cloning (TechDebt → SA-4; YDelivery precedent). The generated
+# pbxproj stays out of version control; Package.resolved remains tracked, so dependency
+# pins survive regeneration.
+name: Salon1cApps
+
+options:
+  # The floor for syncedFolder sources below; older XcodeGen stops with a clear error
+  # instead of generating a wrong project.
+  minimumXcodeGenVersion: "2.44"
+  bundleIdPrefix: com.learnable
+  deploymentTarget:
+    iOS: "17.0"
+  # Drives LastUpgradeCheck: Xcode's "Update to recommended settings" moves it, and the
+  # settings it recommends live in settings.base below, so a regeneration keeps both.
+  xcodeVersion: "27.0"
+  # Buildable folders: file lists never enter the pbxproj, and adding a source file
+  # needs no regeneration (XcodeGen ≥ 2.44, projectFormat xcode16_0 — its default).
+  defaultSourceDirectoryType: syncedFolder
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: WEJF495R4D
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "0.1"
+    CURRENT_PROJECT_VERSION: 1
+    # The floor and the language mode are load-bearing decisions (Design → "The floor is
+    # iOS 17, in Swift 6 language mode").
+    SWIFT_VERSION: "6.0"
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: YES
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    STRING_CATALOG_GENERATE_SYMBOLS: YES
+    CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    GCC_C_LANGUAGE_STANDARD: gnu17
+    CLANG_CXX_LANGUAGE_STANDARD: gnu++20
+  configs:
+    Release:
+      VALIDATE_PRODUCT: YES
+
+settingGroups:
+  # Target-level because XcodeGen's iOS preset would otherwise override the project
+  # setting with the legacy "iPhone Developer"; Xcode writes "Apple Development".
+  signing:
+    CODE_SIGN_IDENTITY: Apple Development
+
+packages:
+  # The kit — two apps, one direction, one local package.
+  SalonKit:
+    path: SalonKit
+  # The API client by URL — pinned in two places (here and SalonKit/Package.swift),
+  # the pins move together (Design → "the API package by URL"). Declared so the pin
+  # is visible at project level; no target links the product directly — SA-8.
+  Salon1c:
+    url: https://github.com/laconicman/Salon1c
+    minorVersion: 0.3.1
+  # The test target's stub transport speaks ClientTransport directly.
+  swift-openapi-runtime:
+    url: https://github.com/apple/swift-openapi-runtime
+    from: 1.13.0
+  # HTTPRequest/HTTPBody/HTTPResponse — the types ClientTransport sends.
+  swift-http-types:
+    url: https://github.com/apple/swift-http-types
+    from: 1.0.0
+  # OSLogLoggingMiddleware is deliberately NOT declared anywhere — a second
+  # consumer hits the upstream-manifest bug (SA-8).
+
+targets:
+  SalonBook:
+    type: application
+    platform: iOS
+    sources:
+      - SalonBook
+    dependencies:
+      - package: SalonKit
+        product: SalonKit
+    # The salon identity is build configuration, not code: Salon.xcconfig fills the
+    # three SALON_* variables, the partial Info.plist copies them into the bundle's
+    # InfoDictionary, and SalonKit's SalonConfiguration reads them back.
+    configFiles:
+      Debug: Salon.xcconfig
+      Release: Salon.xcconfig
+    settings:
+      groups: [signing]
+      base:
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        ENABLE_PREVIEWS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: YES
+        # The config keys $(SALON_*) resolve into, plus the ATS exceptions a
+        # partial plist carries (INFOPLIST_KEY_ cannot express dictionary
+        # structure). Kept at the repo root, outside the synced sources folder.
+        INFOPLIST_FILE: SalonBook-Info.plist
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        SWIFT_EMIT_LOC_STRINGS: YES
+    scheme:
+      testTargets:
+        - SalonBookTests
+
+  SalonDesk:
+    type: application
+    platform: iOS
+    sources:
+      - SalonDesk
+    dependencies:
+      - package: SalonKit
+        product: SalonKit
+    settings:
+      groups: [signing]
+      base:
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        ENABLE_PREVIEWS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        SWIFT_EMIT_LOC_STRINGS: YES
+
+  SalonBookTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - SalonBookTests
+    dependencies:
+      - target: SalonBook
+      # No SalonKit product here: it is a static library already linked into
+      # SalonBook (SA-8) — the test bundle resolves the module through the app.
+      - package: swift-openapi-runtime
+        product: OpenAPIRuntime
+      - package: swift-http-types
+        product: HTTPTypes
+    settings:
+      groups: [signing]
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SalonBook.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SalonBook"
+        SWIFT_EMIT_LOC_STRINGS: NO
