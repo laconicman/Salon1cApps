@@ -80,14 +80,20 @@ private struct SalonFailure: View {
 }
 
 #if DEBUG
+/// A controller over `PreviewTransport`; nil only if the preview's own literals
+/// stop parsing — rendered as a fallback, never a trap (rule 5).
+private func previewController() -> SalonController? {
+    guard let serverURL = URL(string: "http://preview.invalid/api") else { return nil }
+    let configuration = SalonConfiguration(salonID: "0d190fc8", apiKey: "preview", serverURL: serverURL)
+    guard let client = try? SalonClient.make(configuration: configuration, transport: PreviewTransport()) else {
+        return nil
+    }
+    return SalonController(configuration: configuration, client: client)
+}
+
 #Preview("Root") {
-    let configuration = SalonConfiguration(
-        salonID: "0d190fc8",
-        apiKey: "preview",
-        serverURL: URL(string: "http://preview.invalid/api")!
-    )
-    if let client = try? SalonClient.make(configuration: configuration, transport: PreviewTransport()) {
-        RootView().environment(SalonController(configuration: configuration, client: client))
+    if let controller = previewController() {
+        RootView().environment(controller)
     } else {
         Text("Preview client unavailable")
     }
