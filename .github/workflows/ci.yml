@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # project.pbxproj is gitignored — XcodeGen regenerates it from project.yml.
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      # -skipPackagePluginValidation: the OpenAPI generator's trust prompt would
+      # otherwise hang a non-interactive build.
+      - name: Build and test SalonBook
+        run: |
+          xcodebuild test \
+            -scheme SalonBook \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
+            -skipMacroValidation \
+            -skipPackagePluginValidation
+
+  kit:
+    name: Kit tests
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # SalonKit builds standalone — its own Package.swift carries the Salon1cAPI
+      # dependency, so the kit's tests need no Xcode project.
+      - name: Test SalonKit
+        run: swift test --package-path SalonKit
+
+  release:
+    name: Build Release
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Build SalonBook Release
+        run: |
+          xcodebuild build \
+            -scheme SalonBook \
+            -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipMacroValidation \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Build SalonDesk Release
+        run: |
+          xcodebuild build \
+            -scheme SalonDesk \
+            -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipMacroValidation \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO
