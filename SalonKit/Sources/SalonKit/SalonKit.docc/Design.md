@@ -26,9 +26,10 @@ pbxproj — the structured-files rule.
 
 ## D3 — The API package by URL, pinned in two places
 
-`SalonKit/Package.swift` declares `Salon1c` at `.upToNextMinor(from: "0.3.0")`,
-and `project.yml` declares it again at `minorVersion: 0.3.0`. The pins move
-together — rule 9.
+`SalonKit/Package.swift` declares `Salon1c` at `.upToNextMinor(from: "0.3.1")`,
+and `project.yml` declares it again at `minorVersion: 0.3.1`. The pins move
+together — rule 9. The manifests are authoritative for the number; this
+article records the *rule* — both pins, same tag.
 
 **Rejected:** a path dependency — a clean clone must prove the published
 product builds. **Rejected:** `from:` — 0.x minors break.

@@ -16,13 +16,24 @@ final class SalonController {
     private(set) var phase: Phase = .loading
     let configuration: SalonConfiguration
     private let client: Client
+    @ObservationIgnored private var loading: Task<Void, Never>?
 
     init(configuration: SalonConfiguration, client: Client) {
         self.configuration = configuration
         self.client = client
     }
 
-    func load() async {
+    /// Starts the load, cancelling one already in flight — the controller owns
+    /// the task (rule 8); tests await the returned handle.
+    @discardableResult
+    func reload() -> Task<Void, Never> {
+        loading?.cancel()
+        let task = Task { await fetch() }
+        loading = task
+        return task
+    }
+
+    private func fetch() async {
         phase = .loading
         do {
             let salons = try await client
@@ -31,6 +42,7 @@ final class SalonController {
                 .compactMap(Salon.init)
             phase = .loaded(salons)
         } catch {
+            guard !Task.isCancelled else { return }
             phase = .failed(error.localizedDescription)
         }
     }

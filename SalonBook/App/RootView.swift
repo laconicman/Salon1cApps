@@ -14,14 +14,12 @@ struct RootView: View {
                 case .loaded(let salons):
                     SalonsList(salons: salons)
                 case .failed(let message):
-                    SalonFailure(message: message) {
-                        Task { await controller.load() }
-                    }
+                    SalonFailure(message: message, retry: { controller.reload() })
                 }
             }
             .navigationTitle("Salons")
         }
-        .task { await controller.load() }
+        .onAppear { controller.reload() }
     }
 }
 
@@ -80,3 +78,18 @@ private struct SalonFailure: View {
 #Preview("Failure") {
     SalonFailure(message: "getSalons: refused — code 1000 — Ошибка работы с базой данных.") {}
 }
+
+#if DEBUG
+#Preview("Root") {
+    let configuration = SalonConfiguration(
+        salonID: "0d190fc8",
+        apiKey: "preview",
+        serverURL: URL(string: "http://preview.invalid/api")!
+    )
+    if let client = try? SalonClient.make(configuration: configuration, transport: PreviewTransport()) {
+        RootView().environment(SalonController(configuration: configuration, client: client))
+    } else {
+        Text("Preview client unavailable")
+    }
+}
+#endif
