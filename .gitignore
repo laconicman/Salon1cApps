@@ -1,0 +1,32 @@
+.DS_Store
+.build
+SalonKit/.build
+xcuserdata/
+*.xcuserstate
+DerivedData/
+.swiftpm
+.netrc
+.vscode
+.ci/
+
+# Credentials and local salon configuration. Real salon values live in the
+# gitignored Salon.local.xcconfig (the committed Salon.xcconfig #include?'s it);
+# the patterns below exist so a copy made "just for a minute" cannot be committed.
+Salon.local.xcconfig
+*.token
+*-token
+.env
+.env.*
+secrets.*
+*.pem
+*.p12
+
+# The project file is generated: project.yml is the source of truth (TechDebt →
+# SA-4), so the pbxproj and generated schemes leave version control — run
+# `xcodegen generate` after cloning or editing the spec.
+Salon1cApps.xcodeproj/project.pbxproj
+Salon1cApps.xcodeproj/xcshareddata/xcschemes/
+
+# NOT ignored, deliberately: Package.resolved — an app pins its dependencies
+# (it lands inside the xcodeproj's project.xcworkspace). A library would let
+# consumers resolve their own; SalonKit/.build above keeps the kit's local one out.
