@@ -16,12 +16,52 @@ private struct StubTransport: ClientTransport {
     }
 }
 
-/// Sleeps past any reasonable reload, so a cancelled first request throws
-/// `CancellationError` (from `Task.sleep`) rather than answering stale data.
-private struct SleepingTransport: ClientTransport {
+/// Holds the first request until released, so the test controls the order in
+/// which two in-flight responses land.
+private actor Gate {
+    private var started: CheckedContinuation<Void, Never>?
+    private var release: CheckedContinuation<Void, Never>?
+    private var hasStarted = false
+
+    func markStarted() {
+        hasStarted = true
+        started?.resume()
+    }
+    func waitUntilStarted() async {
+        if hasStarted { return }
+        await withCheckedContinuation { started = $0 }
+    }
+    func hold() async {
+        await withCheckedContinuation { release = $0 }
+    }
+    func open() {
+        release?.resume()
+    }
+}
+
+/// Call 1 answers `stale` only after the gate opens; every later call answers
+/// `fresh` at once — deterministic ordering for the supersession test.
+private struct GatedTransport: ClientTransport {
+    let gate: Gate
+    let stale: String
+    let fresh: String
+    let calls = Counter()
+
+    actor Counter {
+        private var value = 0
+        func next() -> Int {
+            defer { value += 1 }
+            return value
+        }
+    }
+
     func send(_ request: HTTPRequest, body requestBody: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
-        try await Task.sleep(for: .seconds(5))
-        return (HTTPResponse(status: .ok), HTTPBody("{}"))
+        if await calls.next() == 0 {
+            await gate.markStarted()
+            await gate.hold()
+            return (HTTPResponse(status: .ok), HTTPBody(stale))
+        }
+        return (HTTPResponse(status: .ok), HTTPBody(fresh))
     }
 }
 
@@ -74,39 +114,29 @@ struct SalonControllerTests {
         #expect(text.contains("1000"))
     }
 
-    @Test("a reload cancels the request in flight")
-    func reloadCancelsInFlight() async throws {
-        // The first load sleeps; reload() must cancel it so its CancellationError
-        // is swallowed, then the second load's body wins.
-        let controller = try controller(transport: SleepingThenStubTransport())
-        _ = controller.reload()
-        let second = controller.reload()
+    @Test("a superseded request never writes the phase, even when it later succeeds")
+    func supersededRequestIsIgnored() async throws {
+        let gate = Gate()
+        let controller = try controller(transport: GatedTransport(
+            gate: gate,
+            stale: """
+                {"Parameters":[{"id":"0d190fc8","title":"STALE","work_time":[{"active":true,"day":1,"start":"07:00","end":"22:00"}],"contact_information":{"phone":"78945612233","email":"test_salon@mail.ru","address":"г.Москва","website":"www.website.ru"}}],"Errors":{"code":0,"message":""}}
+                """,
+            fresh: """
+                {"Parameters":[{"id":"0d190fc8","title":"OOO \\"Салон красоты\\"","work_time":[{"active":true,"day":1,"start":"07:00","end":"22:00"}],"contact_information":{"phone":"78945612233","email":"test_salon@mail.ru","address":"г.Москва","website":"www.website.ru"}}],"Errors":{"code":0,"message":""}}
+                """
+        ))
+        let first = controller.reload()
+        await gate.waitUntilStarted()       // call 1 is in flight, suspended at the gate
+        let second = controller.reload()    // cancels task 1
         await second.value
         #expect(controller.phase == .loaded([
             Salon(id: "0d190fc8", title: "OOO \"Салон красоты\"", phone: "78945612233", email: "test_salon@mail.ru", address: "г.Москва", website: "www.website.ru")
         ]))
-    }
-}
-
-/// Answers like `SleepingTransport` once, then like `StubTransport` — the two
-/// transports a double-`reload` exercises in one client.
-private struct SleepingThenStubTransport: ClientTransport {
-    let calls = Counter()
-
-    actor Counter {
-        private var value = 0
-        func next() -> Int {
-            defer { value += 1 }
-            return value
-        }
-    }
-
-    func send(_ request: HTTPRequest, body requestBody: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
-        if await calls.next() == 0 {
-            try await Task.sleep(for: .seconds(5))
-        }
-        return (HTTPResponse(status: .ok), HTTPBody("""
-            {"Parameters":[{"id":"0d190fc8","title":"OOO \\"Салон красоты\\"","work_time":[{"active":true,"day":1,"start":"07:00","end":"22:00"}],"contact_information":{"phone":"78945612233","email":"test_salon@mail.ru","address":"г.Москва","website":"www.website.ru"}}],"Errors":{"code":0,"message":""}}
-            """))
+        await gate.open()                   // the stale response lands on the cancelled task
+        await first.value
+        #expect(controller.phase == .loaded([
+            Salon(id: "0d190fc8", title: "OOO \"Салон красоты\"", phone: "78945612233", email: "test_salon@mail.ru", address: "г.Москва", website: "www.website.ru")
+        ]))
     }
 }

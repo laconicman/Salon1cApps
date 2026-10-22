@@ -33,6 +33,8 @@ final class SalonController {
         return task
     }
 
+    /// A superseded request never writes `phase`, whichever way it ends —
+    /// success or failure.
     private func fetch() async {
         phase = .loading
         do {
@@ -40,6 +42,7 @@ final class SalonController {
                 .getSalons(path: .init(salonId: configuration.salonID))
                 .payload()
                 .compactMap(Salon.init)
+            guard !Task.isCancelled else { return }
             phase = .loaded(salons)
         } catch {
             guard !Task.isCancelled else { return }
