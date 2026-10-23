@@ -1,8 +1,5 @@
 import Foundation
-// Re-exported so the apps see `Client`, `Operations` and `.payload()` through
-// `import SalonKit` alone — a direct dependency would hit the upstream-manifest
-// linking bug (TechDebt → SA-8).
-@_exported import Salon1cAPI
+import Salon1cAPI
 import OpenAPIRuntime
 import OpenAPIURLSession
 

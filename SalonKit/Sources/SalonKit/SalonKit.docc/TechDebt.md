@@ -72,6 +72,17 @@ are `HH:mm` strings and wire day numbers; formatting is that slice's job.
 
 ## SA-8 — SalonKit works around OSLogLoggingMiddleware's manifest
 
+**Discharged 2026-10-24** by OSLogLoggingMiddleware 1.1.1
+(laconicman/OSLogLoggingMiddleware#1, declares `OpenAPIRuntime`) and
+Salon1c 0.3.3 (laconicman/Salon1c#20, the follow-up `HTTPTypes` declaration the
+discharge build itself proved missing). Evidence: the two-consumer
+`xcodebuild build-for-testing` — app and test bundle both linking `Salon1cAPI`,
+which Xcode builds as a dynamic package framework — fails to link at 0.3.1/1.1.0
+(undefined `OpenAPIRuntime` symbols in `OSLogLoggingMiddleware`, then
+`HTTPTypes` in `Salon1cAPI`) and succeeds at 0.3.3/1.1.1. The wiring landed with
+the discharge: `.static` and `@_exported` are gone and app/test targets link
+`Salon1cAPI` directly.
+
 The upstream package (`laconicman/OSLogLoggingMiddleware` 1.1.0) imports
 `OpenAPIRuntime` without declaring the `swift-openapi-runtime` product in its
 target dependencies — it links statically, but not as a dynamic package
