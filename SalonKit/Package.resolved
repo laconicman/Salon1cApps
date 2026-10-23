@@ -1,5 +1,5 @@
 {
-  "originHash" : "b06f3498e7a4a567e6fb1040666ef619feb8862d354dc3a0b0c7e52917ffc61c",
+  "originHash" : "a5fd571cbd33fe8eccb35f18cee057ace6aa42ea25b2c4428a0215234f111549",
   "pins" : [
     {
       "identity" : "openapikit",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/laconicman/OSLogLoggingMiddleware",
       "state" : {
-        "revision" : "c66068020740e4c872157da696c0f4f999df7e74",
-        "version" : "1.1.0"
+        "revision" : "f1696ab3c7b1d5d36aa23e57a0358aa5e1343429",
+        "version" : "1.1.1"
       }
     },
     {
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/laconicman/Salon1c",
       "state" : {
-        "revision" : "3aa264c48472198d19be09eae8a9ef70b45c38b1",
-        "version" : "0.3.1"
+        "revision" : "db3fc55c51126eae8ae34715d1d4b1dbcbf76475",
+        "version" : "0.3.3"
       }
     },
     {
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections",
       "state" : {
-        "revision" : "35a1edcb8ebd2bfe251d587f0b69e62af28f508c",
-        "version" : "1.7.3"
+        "revision" : "844289ac455816e193f1dbbe014f3c4dbe429410",
+        "version" : "1.7.4"
       }
     },
     {

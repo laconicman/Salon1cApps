@@ -51,11 +51,11 @@ packages:
   SalonKit:
     path: SalonKit
   # The API client by URL — pinned in two places (here and SalonKit/Package.swift),
-  # the pins move together (Design → "the API package by URL"). Declared so the pin
-  # is visible at project level; no target links the product directly — SA-8.
+  # the pins move together (Design → "the API package by URL"). App and test targets
+  # link the Salon1cAPI product directly, the YDelivery precedent.
   Salon1c:
     url: https://github.com/laconicman/Salon1c
-    minorVersion: 0.3.1
+    minorVersion: 0.3.3
   # The test target's stub transport speaks ClientTransport directly.
   swift-openapi-runtime:
     url: https://github.com/apple/swift-openapi-runtime
@@ -64,8 +64,13 @@ packages:
   swift-http-types:
     url: https://github.com/apple/swift-http-types
     from: 1.0.0
-  # OSLogLoggingMiddleware is deliberately NOT declared anywhere — a second
-  # consumer hits the upstream-manifest bug (SA-8).
+  # SalonClient.make's default transport — Swift emits default arguments at the
+  # call site, so the app target links URLSessionTransport itself.
+  swift-openapi-urlsession:
+    url: https://github.com/apple/swift-openapi-urlsession
+    from: 1.3.1
+  # OSLogLoggingMiddleware needs no declaration — Salon1cAPI composes it internally
+  # (Client.init); app code never names the middleware module.
 
 targets:
   SalonBook:
@@ -76,6 +81,15 @@ targets:
     dependencies:
       - package: SalonKit
         product: SalonKit
+      - package: Salon1c
+        product: Salon1cAPI
+      # PreviewTransport.swift stubs ClientTransport directly.
+      - package: swift-openapi-runtime
+        product: OpenAPIRuntime
+      - package: swift-http-types
+        product: HTTPTypes
+      - package: swift-openapi-urlsession
+        product: OpenAPIURLSession
     # The salon identity is build configuration, not code: Salon.xcconfig fills the
     # three SALON_* variables, the partial Info.plist copies them into the bundle's
     # InfoDictionary, and SalonKit's SalonConfiguration reads them back.
@@ -134,8 +148,12 @@ targets:
       - SalonBookTests
     dependencies:
       - target: SalonBook
-      # No SalonKit product here: it is a static library already linked into
-      # SalonBook (SA-8) — the test bundle resolves the module through the app.
+      # The test bundle links the kit and the API package beside the app target —
+      # it stubs ClientTransport directly (runtime + http-types below).
+      - package: SalonKit
+        product: SalonKit
+      - package: Salon1c
+        product: Salon1cAPI
       - package: swift-openapi-runtime
         product: OpenAPIRuntime
       - package: swift-http-types

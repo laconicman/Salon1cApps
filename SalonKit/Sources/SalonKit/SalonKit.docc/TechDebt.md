@@ -70,19 +70,25 @@ title and contacts only.
 **Discharge:** the first slice that shows hours maps it — `day`/`start`/`end`
 are `HH:mm` strings and wire day numbers; formatting is that slice's job.
 
-## SA-8 — SalonKit works around OSLogLoggingMiddleware's manifest
+## SA-8 — SalonKit worked around OSLogLoggingMiddleware's manifest
 
-The upstream package (`laconicman/OSLogLoggingMiddleware` 1.1.0) imports
-`OpenAPIRuntime` without declaring the `swift-openapi-runtime` product in its
-target dependencies — it links statically, but not as a dynamic package
-framework, which is what Xcode builds when a product has two consumers. Three
-workarounds here depend on it: `SalonKit` is a `.static` product
-(`SalonKit/Package.swift`), `SalonClient.swift` `@_exported import Salon1cAPI`,
-and no app target links `Salon1cAPI` directly (`project.yml`).
+**Discharged 2026-10-24.** Until then the upstream package
+(`laconicman/OSLogLoggingMiddleware` 1.1.0) imported `OpenAPIRuntime` without
+declaring the `swift-openapi-runtime` product in its target dependencies — it
+linked statically, but not as a dynamic package framework, which is what Xcode
+builds when a product has two consumers. Three workarounds here depended on it:
+`SalonKit` was a `.static` product, `SalonClient.swift` `@_exported import
+Salon1cAPI`, and no app target linked `Salon1cAPI` directly — at the cost that
+rule 1 held by review, not by the compiler, and a second kit consumer had to stay
+static.
 
-**Cost:** `@_exported` hands every app file the whole generated module without
-an explicit import — rule 1 holds by review, not by the compiler; a second kit
-consumer must stay static.
-**Discharge:** fix the upstream manifest (declare `OpenAPIRuntime`), tag it,
-bump the pin through `Salon1c`; then drop `.static` and `@_exported` and link
-`Salon1cAPI` from the app targets as YDelivery links its package.
+Discharged by OSLogLoggingMiddleware 1.1.1 (laconicman/OSLogLoggingMiddleware#1,
+declares `OpenAPIRuntime`) and Salon1c 0.3.3 (laconicman/Salon1c#20, the
+follow-up `HTTPTypes` declaration the discharge build itself proved missing).
+Evidence: the two-consumer `xcodebuild build-for-testing` — app and test bundle
+both linking `Salon1cAPI`, which Xcode builds as a dynamic package framework —
+fails to link at 0.3.1/1.1.0 (undefined `OpenAPIRuntime` symbols in
+`OSLogLoggingMiddleware`, then `HTTPTypes` in `Salon1cAPI`) and succeeds at
+0.3.3/1.1.1. The wiring landed with the discharge: `.static` and `@_exported`
+are gone and app/test targets link `Salon1cAPI` directly, as YDelivery links its
+package.
